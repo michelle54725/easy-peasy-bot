@@ -85,10 +85,106 @@ controller.on('bot_channel_join', function (bot, message) {
     bot.reply(message, "I'm here!")
 });
 
-controller.hears('hello', 'direct_message', function (bot, message) {
-    bot.reply(message, 'Hello!');
+controller.hears(
+  ['hello', 'hi', 'yo', 'greetings', 'nihao'],
+  ['direct_message', 'mention', 'direct_mention'],
+  function (bot, message) {
+    bot.reply(message, 'Yo!');
 });
 
+controller.hears('another_keyword','direct_message,direct_mention',function(bot,message) {
+  var reply_with_attachments = {
+    'username': 'My bot' ,
+    'text': 'This is a pre-text',
+    'attachments': [
+      {
+        'fallback': 'To be useful, I need you to invite me in a channel.',
+        'title': 'How can I help you?',
+        'text': 'To be useful, I need you to invite me in a channel ',
+        'color': '#7CD197'
+      }
+    ],
+    'icon_url': 'http://lorempixel.com/48/48'
+    }
+
+  bot.reply(message, reply_with_attachments);
+});
+
+controller.hears(['question me'], 'direct_message', function(bot,message) {
+
+  // start a conversation to handle this response.
+  bot.startConversation(message,function(err,convo) {
+
+    convo.addQuestion('Shall we proceed Say YES, NO or DONE to quit.',[
+      {
+        pattern: 'done',
+        callback: function(response,convo) {
+          convo.say('OK you are done!');
+          convo.next();
+        }
+      },
+      {
+        pattern: bot.utterances.yes,
+        callback: function(response,convo) {
+          convo.say('Great! I will continue...');
+
+              convo.addMessage({text: 'Hello let me ask you a question, then i will do something useful'},'default');
+              convo.addQuestion({text: 'What is your name?'}, function(res, convo) {
+              //name has been collected
+              convo.gotoThread('completed');
+            },{key: 'name'},'default');
+              //create completed thread
+              convo.addMessage({text: 'I saved your name in the database, {{vars.name}}'},'completed');
+              // create an error thread
+              convo.addMessage({text: 'Oh no I had an error! {{vars.error}}'},'error');
+
+              // now, define a function that will be called AFTER the `default` thread ends and BEFORE the `completed` thread begins
+              convo.beforeThread('completed', function(convo, next) {
+
+                var name = convo.extractResponse('name');
+
+                //do something complex HERE
+                myFakeFunction(name).then(function(results) {
+                  convo.setVar('results', results);
+                  //call next to continue to the secondary gotoThread
+                  next();
+                }).catch(function(err) {
+                  convo.setVar('error',err);
+                  convo.gotoThread('error');
+                  next(err); pass an error because we changed threads again during transition
+                });
+              });
+
+          convo.next();
+        }
+      },
+      {
+        pattern: bot.utterances.no,
+        callback: function(response,convo) {
+          convo.say('Perhaps later.');
+          convo.next();
+        }
+      },
+      {
+        default: true,
+        callback: function(response,convo) {
+          // just repeat the question
+          convo.repeat();
+          convo.next();
+        }
+      }
+    ],{},'default');
+  })
+
+});
+
+
+
+
+controller.on('channel_join', function(bot, message) {
+  bot.reply(message,
+    "Welcome to AWE's Slack channel! \n Please take a moment to fill in this intro card:");
+});
 
 /**
  * AN example of what could be:
