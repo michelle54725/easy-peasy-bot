@@ -113,8 +113,8 @@ controller.hears('another_keyword','direct_message,direct_mention',function(bot,
 controller.hears(['question me'], 'direct_message', function(bot,message) {
 
   // start a conversation to handle this response.
-  bot.startConversation(message,function(err,convo) {
-
+  bot.startConversation(message, function(err, convo) {
+//Response is typed by user.
     convo.addQuestion('Shall we proceed Say YES, NO or DONE to quit.',[
       {
         pattern: 'done',
@@ -127,34 +127,6 @@ controller.hears(['question me'], 'direct_message', function(bot,message) {
         pattern: bot.utterances.yes,
         callback: function(response,convo) {
           convo.say('Great! I will continue...');
-
-              convo.addMessage({text: 'Hello let me ask you a question, then i will do something useful'},'default');
-              convo.addQuestion({text: 'What is your name?'}, function(res, convo) {
-              //name has been collected
-              convo.gotoThread('completed');
-            },{key: 'name'},'default');
-              //create completed thread
-              convo.addMessage({text: 'I saved your name in the database, {{vars.name}}'},'completed');
-              // create an error thread
-              convo.addMessage({text: 'Oh no I had an error! {{vars.error}}'},'error');
-
-              // now, define a function that will be called AFTER the `default` thread ends and BEFORE the `completed` thread begins
-              convo.beforeThread('completed', function(convo, next) {
-
-                var name = convo.extractResponse('name');
-
-                //do something complex HERE
-                myFakeFunction(name).then(function(results) {
-                  convo.setVar('results', results);
-                  //call next to continue to the secondary gotoThread
-                  next();
-                }).catch(function(err) {
-                  convo.setVar('error',err);
-                  convo.gotoThread('error');
-                  next(err); pass an error because we changed threads again during transition
-                });
-              });
-
           convo.next();
         }
       },
@@ -176,10 +148,149 @@ controller.hears(['question me'], 'direct_message', function(bot,message) {
     ],{},'default');
   })
 
+//Not sure how to integrate this into convo...Where is convo.next() redirected to?
+    // convo.addMessage({text: 'Hello let me ask you a question, then i will do something useful'},'default');
+    // convo.addQuestion({text: 'What is your name?'}, function(res, convo) {
+    // //name has been collected
+    // convo.gotoThread('completed');
+    // },{key: 'name'},'default');
+    // //create completed thread
+    // convo.addMessage({text: 'I saved your name in the database, {{vars.name}}'},'completed');
+    // // create an error thread
+    // convo.addMessage({text: 'Oh no I had an error! {{vars.error}}'},'error');
+    //
+    // // now, define a function that will be called AFTER the `default` thread ends and BEFORE the `completed` thread begins
+    // convo.beforeThread('completed', function(convo, next) {
+    //
+    //   var name = convo.extractResponse('name');
+    //
+    //   //do something complex HERE
+    //   myFakeFunction(name).then(function(results) {
+    //     convo.setVar('results', results);
+    //     //call next to continue to the secondary gotoThread
+    //     next();
+    //   }).catch(function(err) {
+    //     convo.setVar('error',err);
+    //     convo.gotoThread('error');
+    //     next(err); pass an error because we changed threads again during transition
+    //   });
+    // });
+
 });
 
 
+//send an interactive message. Creates interactive_message_callback event
+controller.hears('interactive', 'direct_message', function(bot, message) {
 
+    bot.reply(message, {
+        attachments:[
+            {
+                title: 'Do you want to interact with my buttons?',
+                callback_id: '123', //returned to Action URL
+                attachment_type: 'default',
+                actions: [
+                    {
+                        "name":"yes", //returned to Action URL when invoked
+                        "text": "Yes", //user-facing label
+                        "value": "yes", //returned with callback_id and name
+                        "type": "button",
+                        "style": "primary",
+                    },
+                    {
+                        "name":"no",
+                        "text": "No",
+                        "value": "no",
+                        "type": "button",
+                        "style": "danger",
+                    },
+                    {
+                        "name":"uh",
+                        "text": "Uhhhh",
+                        "value": "uh",
+                        "type": "select", //creates a message menu
+                        "options": [ //array of option fields
+                          {
+                            "text": "Option 1",
+                            "value": "option_1"
+                          },
+                          {
+                            "text": "Option 2",
+                            "value": "option_2"
+                          },
+                          {
+                            "text": "Option 3",
+                            "value": "option_3"
+                          }
+                        ]
+                    }
+                ]
+            }
+        ]
+    });
+    console.log('end of interactive message');
+});
+
+// receive an interactive message (invocation), and reply with a message that will replace the original
+controller.on('interactive_message_callback', function(bot, message) {
+    console.log('recieved callback');
+    // check message.actions and message.callback_id to see what action to take...
+    if (message.callback_id == '123') {
+      console.log('entered callback_id 123');
+
+      if (message.actions.name == 'yes') {
+        console.log('entered value: yes');
+        bot.replyInteractive(message, {
+            text: "This is the recieved message callback response w/ callback_id: " + message.callback_id + ".",
+            attachments: [
+                {
+                    title: 'Some other things to do',
+                    callback_id: '123',
+                    attachment_type: 'default',
+                    actions: [
+                        {
+                            "name":"yes",
+                            "text": "YAS!",
+                            "value": "yes",
+                            "type": "button",
+                        },
+                        {
+                           "text": "NAW!",
+                            "name": "no",
+                            "value": "delete",
+                            "style": "danger",
+                            "type": "button",
+                            //creates pop up window
+                            "confirm": {
+                              "title": "Are you sure?",
+                              "text": "This will do something!",
+                              "ok_text": "Yes",
+                              "dismiss_text": "No"
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+      }
+
+      if (message.actions.value == 'no') {
+        console.log('entered value: no');
+        bot.reply(message, {
+          attachments:[
+            {
+              title: 'You said no... :(',
+              fallback: 'this is the fallback field',
+              callback_id: '000'
+            }
+          ]
+        });
+      }
+
+    }
+});
+
+//dialogs in response to interactive_message_callback (or slash_command)
+//using bot.replyWithDialog() and bot.createDialog() to build object
 
 controller.on('channel_join', function(bot, message) {
   bot.reply(message,
