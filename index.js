@@ -237,7 +237,8 @@ controller.on('interactive_message_callback', function(bot, message) {
     if (message.callback_id == '123') {
       console.log('entered callback_id 123');
 
-      if (message.actions.name == 'yes') {
+      //reply and replace
+      if (message.actions[0].name == 'yes') {
         console.log('entered value: yes');
         bot.replyInteractive(message, {
             text: "This is the recieved message callback response w/ callback_id: " + message.callback_id + ".",
@@ -273,24 +274,43 @@ controller.on('interactive_message_callback', function(bot, message) {
         });
       }
 
-      if (message.actions.value == 'no') {
+      //reply without replace
+      if (message.actions[0].name.match(/^no/)) {
         console.log('entered value: no');
         bot.reply(message, {
           attachments:[
             {
               title: 'You said no... :(',
-              fallback: 'this is the fallback field',
+              fallback: 'Upgrade your Slack client to use messages like these. Don\'t fall out.', //displayed if user's interface sucks
               callback_id: '000'
             }
           ]
         });
       }
 
+      //dialogs in response to interactive_message_callback (or slash_command)
+      //using bot.replyWithDialog() and bot.createDialog() to build object
+      if (message.actions[0].name == 'uh') {
+        console.log('entered value: uh');
+
+        var dialog = bot.createDialog(
+         'Title of dialog', //dialogue.title()
+         'callback_id_of_dialogue', //dialogue.callback_id()
+         'SubmitLABELWOO' //label for the submit button d.submit_label()
+       ).addText('Text','name','value (optional)')
+        .addEmail('Email','Your Email', 'value (optional)')
+        .addSelect('Select','name',null,[{label:'Foo',value:'foo'},{label:'Bar',value:'bar'}],{placeholder: 'Select One'})
+        .addTextarea('Textarea','textarea','some longer text',{placeholder: 'Put words here'})
+        .addUrl('addUrl','name','http://botkit.ai(value)');
+
+        bot.replyWithDialog(message, dialog.asObject());
+        // bot.replyWithDialog(message, dialog.asObject(), function(err, res) {
+        //   //handle the error
+        // });
+      }
+
     }
 });
-
-//dialogs in response to interactive_message_callback (or slash_command)
-//using bot.replyWithDialog() and bot.createDialog() to build object
 
 controller.on('channel_join', function(bot, message) {
   bot.reply(message,

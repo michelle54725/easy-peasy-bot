@@ -1,1 +1,4 @@
-TODO: figure out how to use message.actions to create different paths for corresponding buttons (Line 240)
+TODO: deal with 
+TypeError: bot.createDialog is not a function LINE 296
+
+CLIENT_ID=382206173877.382017983875 CLIENT_SECRET=0413d213254f193df98d567e083ba0ca PORT=8765 npm start
